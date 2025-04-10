@@ -23,7 +23,7 @@ def linear_model(L, a, b):
 
 
 def main():
-    N_species_values = np.arange(2, 42, 2)  # Multiple values of N_species
+    N_species_values = np.arange(40, 201, 20)  # Multiple values of N_species
     L_array = np.arange(10, 210, 10)
     max_steps = 10000
     N_simulations = 10  # Number of simulations for each (L, N_species)
@@ -69,7 +69,7 @@ def main():
     plt.xlabel("Number of Species")
     plt.ylabel("Slope of Linear Fit")
     plt.grid()
-    plt.savefig("src/percolation/plots/systemSize/2DScalingSlopeVsSpecies.png", dpi=300)
+    plt.savefig("src/percolation/plots/systemSize/2DScalingSlopeVsSpecies_Large.png", dpi=300)
     plt.show()
 
 
