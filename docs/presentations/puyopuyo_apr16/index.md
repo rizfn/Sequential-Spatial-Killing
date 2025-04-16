@@ -42,6 +42,8 @@ $\\$
 
 - Drop one puyo at a time
 
+- 2 is enough to trigger annihilation
+
 - Choose a random column (no player input!)
 
 ---
@@ -66,7 +68,7 @@ $\\$
 
 ---
 
-<iframe width="100%" height="100%" src="https://www.youtube.com/embed/d2352OEOWaw?autoplay=1&loop=1&playlist=d2352OEOWaw" style="border: 1px solid #cccccc" frameborder=0></iframe>
+<iframe width="100%" height="100%" src="https://www.youtube.com/embed/d2352OEOWaw?loop=1" style="border: 1px solid #cccccc" frameborder=0></iframe>
 
 ---
 
