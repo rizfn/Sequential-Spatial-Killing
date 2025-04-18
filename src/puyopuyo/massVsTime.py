@@ -41,7 +41,7 @@ def fall(lattice, L):
 
 
 def main():
-    L = 100
+    L = 128
     N_species_list = np.arange(2, 9, 1)
     N_puyos = int(L**2 / 2)
 
@@ -75,7 +75,7 @@ def main():
     ax2.set_ylabel('Max Height')
     ax2.grid()
     ax2.legend()
-    plt.savefig('src/puyopuyo/plots/2D_MassVsTime.png', dpi=300)
+    plt.savefig('src/puyopuyo/plots/ballisticDeposition/2D_MassVsTime.png', dpi=300)
     plt.show()
 
 

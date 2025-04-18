@@ -46,7 +46,7 @@ def fall(lattice, L):
         remove_puyo(lattice)  # Remove any clusters that are now connected after falling
 
 def main():
-    L = 24  # Smaller lattice size for faster simulation
+    L = 32  # Smaller lattice size for faster simulation
     N_species_list = np.arange(2, 9, 1)
     N_puyos = int(L**3 / 4)
 
@@ -81,7 +81,7 @@ def main():
     ax2.set_ylabel('Max Height')
     ax2.grid()
     ax2.legend()
-    plt.savefig('src/puyopuyo/plots/3D_MassVsTime.png', dpi=300)
+    plt.savefig('src/puyopuyo/plots/ballisticDeposition/3D_MassVsTime.png', dpi=300)
     plt.show()
 
 if __name__ == "__main__":
