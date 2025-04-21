@@ -20,17 +20,18 @@ std::random_device rd;
 std::mt19937 gen(rd());
 
 // Define constants
-constexpr int DEFAULT_L = 256; // side length of the square lattice
+constexpr int DEFAULT_L = 128;       // side length of the square lattice
 constexpr int DEFAULT_N_SPECIES = 6; // number of species
-constexpr int DEFAULT_STEPS_PER_LATTICEPOINT = 4096;
+constexpr int DEFAULT_STEPS_PER_LATTICEPOINT = 128;
 
-void placePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites, std::uniform_int_distribution<> &dis_l, std::uniform_int_distribution<> &dis_species, int L)
+void placePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites,
+               std::uniform_int_distribution<> &dis_l, std::uniform_int_distribution<> &dis_species, int L, int H)
 {
     // Select a column and species
     int col = dis_l(gen);
     int species = dis_species(gen);
 
-    for (int row = L - 1; row >= 0; --row)
+    for (int row = H - 1; row >= 0; --row)
     {
         if (lattice[row][col] == 0)
         {
@@ -41,30 +42,37 @@ void placePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<b
     }
 }
 
-void annihilatePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites, int L) {
-    std::vector<std::vector<bool>> visited(L, std::vector<bool>(L, false));
+void annihilatePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites, int L, int H)
+{
+    std::vector<std::vector<bool>> visited(H, std::vector<bool>(L, false));
 
     // Directions for neighbors (up, down, left, right)
     std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-    for (int row = 0; row < L; ++row) {
-        for (int col = 0; col < L; ++col) {
-            if (movedSites[row][col] && !visited[row][col] && lattice[row][col] != 0) {
+    for (int row = 0; row < H; ++row)
+    {
+        for (int col = 0; col < L; ++col)
+        {
+            if (movedSites[row][col] && !visited[row][col] && lattice[row][col] != 0)
+            {
                 // Perform flood-fill to find the cluster
                 std::vector<std::pair<int, int>> cluster;
                 std::queue<std::pair<int, int>> q;
                 q.push({row, col});
                 visited[row][col] = true;
 
-                while (!q.empty()) {
+                while (!q.empty())
+                {
                     auto [r, c] = q.front();
                     q.pop();
                     cluster.push_back({r, c});
 
                     // Check neighbors
-                    for (auto [dr, dc] : directions) {
+                    for (auto [dr, dc] : directions)
+                    {
                         int nr = r + dr, nc = c + dc;
-                        if (nr >= 0 && nr < L && nc >= 0 && nc < L && !visited[nr][nc] && lattice[nr][nc] == lattice[row][col]) {
+                        if (nr >= 0 && nr < H && nc >= 0 && nc < L && !visited[nr][nc] && lattice[nr][nc] == lattice[row][col])
+                        {
                             q.push({nr, nc});
                             visited[nr][nc] = true;
                         }
@@ -72,8 +80,10 @@ void annihilatePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vec
                 }
 
                 // If the cluster size is greater than 1, remove it
-                if (cluster.size() > 1) {
-                    for (auto [r, c] : cluster) {
+                if (cluster.size() > 1)
+                {
+                    for (auto [r, c] : cluster)
+                    {
                         lattice[r][c] = 0;
                     }
                 }
@@ -82,25 +92,28 @@ void annihilatePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vec
     }
 }
 
-void fall(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites, int L)
+void fall(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites, int L, int H)
 {
     for (int col = 0; col < L; ++col)
     {
-        for (int row = L - 1; row >= 0; --row)
+        int writeRow = H - 1; // Start from the bottom of the column
+        for (int row = H - 1; row >= 0; --row)
         {
-            if (lattice[row][col] == 0)
+            if (lattice[row][col] != 0)
             {
-                for (int r = row - 1; r >= 0; --r)
+                if (writeRow != row)
                 {
-                    if (lattice[r][col] != 0)
-                    {
-                        lattice[row][col] = lattice[r][col];
-                        lattice[r][col] = 0;
-                        movedSites[row][col] = true;
-                        break;
-                    }
+                    lattice[writeRow][col] = lattice[row][col];
+                    lattice[row][col] = 0;
+                    movedSites[writeRow][col] = true;
                 }
+                writeRow--;
             }
+        }
+        // Clear any remaining cells above the last written row
+        for (int row = writeRow; row >= 0; --row)
+        {
+            movedSites[row][col] = false;
         }
     }
 }
@@ -111,45 +124,52 @@ void run(std::ofstream &file, int L, int N_SPECIES, int STEPS_PER_LATTICEPOINT)
     std::uniform_int_distribution<> dis_species(1, N_SPECIES);
     std::uniform_int_distribution<> dis_l(0, L - 1);
 
-    std::vector<std::vector<int>> lattice(L, std::vector<int>(L, 0));
-    std::vector<std::vector<bool>> movedSites(L, std::vector<bool>(L, false));
+    int H = STEPS_PER_LATTICEPOINT; // Height of the lattice
+    std::vector<std::vector<int>> lattice(H, std::vector<int>(L, 0));
+    std::vector<std::vector<bool>> movedSites(H, std::vector<bool>(L, false));
 
     for (int step = 0; step <= STEPS_PER_LATTICEPOINT; ++step)
     {
-        // Place a puyo
-        placePuyo(lattice, movedSites, dis_l, dis_species, L);
-
-        // Annihilation-fall cycle
-        while (true)
+        // Add L random puyos to random columns
+        for (int i = 0; i < L; ++i)
         {
-            annihilatePuyo(lattice, movedSites, L);
-            std::vector<std::vector<bool>> newMovedSites(L, std::vector<bool>(L, false));
-            fall(lattice, newMovedSites, L);
+            placePuyo(lattice, movedSites, dis_l, dis_species, L, H);
 
-            if (newMovedSites == movedSites)
-                break;
+            // Annihilation-fall cycle
+            while (true)
+            {
+                annihilatePuyo(lattice, movedSites, L, H);
+                std::vector<std::vector<bool>> newMovedSites(H, std::vector<bool>(L, false));
+                fall(lattice, newMovedSites, L, H);
 
-            movedSites = newMovedSites;
+                if (newMovedSites == movedSites)
+                    break;
+
+                movedSites = newMovedSites;
+            }
         }
 
         // Record both the number of filled cells and the max height of any column
         int filled_cells = 0;
         int max_height = 0;
-        for (int i = 0; i < L; ++i)
+        for (int col = 0; col < L; ++col)
         {
-            for (int j = 0; j < L; ++j)
+            for (int row = 0; row < H; ++row)
             {
-                if (lattice[i][j] != 0)
+                if (lattice[row][col] != 0)
                 {
                     filled_cells++;
-                    max_height = std::max(max_height, L-i);
+                    max_height = std::max(max_height, H - row);
                 }
             }
         }
+
         // Record the number of filled cells and the max height
         file << step << "\t" << filled_cells << "\t" << max_height << "\n";
 
-        std::cout << "Progress: " << std::fixed << std::setprecision(2) << static_cast<double>(step) / STEPS_PER_LATTICEPOINT * 100 << "%\r" << std::flush;
+        // Print progress
+        std::cout << "Progress: " << std::fixed << std::setprecision(2)
+                  << static_cast<double>(step) / STEPS_PER_LATTICEPOINT * 100 << "%\r" << std::flush;
     }
 }
 
