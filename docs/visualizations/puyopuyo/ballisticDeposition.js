@@ -1,26 +1,56 @@
 // Create a 20x20 grid
 const L = 20;
+let N = 6;
 const grid = Array.from({ length: L }, () => Array(L).fill(0));
-const colors = ["transparent", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]; // Colors for species
+const colors = ["transparent", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#8800FF", "#FF8800", "#00FF88", "#888800", "#8800FF", "#0088FF", "#FF0088", "#8888FF", "#FF8888"];
 
 // Dynamically calculate cell size based on window dimensions
 const cellSize = Math.min(window.innerWidth / L, window.innerHeight / L);
 
-// Initialize D3.js SVG
-const svg = d3.select("body")
-    .append("svg")
-    .attr("width", window.innerWidth)
-    .attr("height", window.innerHeight)
-    .style("display", "flex")
-    .style("align-items", "center")
-    .style("justify-content", "center")
-    .style("background-image", "linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('img/Witch_PPT2.png')")
-    .style("background-size", "contain")
-    .style("background-repeat", "no-repeat")
-    .style("background-position", "center");
+const svg = d3.select("svg#puyogrid");
 
-    const gridGroup = svg.append("g")
+const gridGroup = svg.append("g")
     .attr("transform", `translate(${(window.innerWidth - L * cellSize) / 2}, ${(window.innerHeight - L * cellSize) / 2})`);
+
+const controls = d3.select("div#controls");
+
+controls.append("label")
+    .text("N:")
+    .style("font-family", "PuyoFont")
+    .style("padding", "4px")
+    .style("margin-right", "10px");
+
+const nInput = controls.append("input")
+    .attr("type", "number")
+    .attr("value", N)
+    .attr("min", 1)
+    .attr("max", colors.length - 1)
+    .style("width", "3.5rem")
+    .style("font-size", "2rem")
+    .style("font-family", "PuyoFont")
+    .style("background-color", "#222222")
+    .style("color", "#fac9d5")
+    .style("border-right", "2px solid #444444");
+
+controls.append("button")
+    .text("Reset")
+    .style("color", "#fac9d5")
+    .style("margin-left", "10px")
+    .on("click", () => {
+        N = parseInt(nInput.property("value"), 10);
+        if (isNaN(N) || N < 1 || N > colors.length - 1) {
+            alert("Please enter a valid number for N (between 1 and " + (colors.length - 1) + ").");
+            return;
+        }
+        grid.forEach(row => row.fill(0));
+        currentPuyo = null;
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
+        drawGrid();
+    });
+
 
 function drawGrid() {
     gridGroup.selectAll("rect")
@@ -169,13 +199,33 @@ function step() {
 document.addEventListener("keydown", (event) => {
     if (event.code === "Space" && !currentPuyo) {
         const column = Math.floor(Math.random() * L);
-        const species = Math.floor(Math.random() * (colors.length - 1)) + 1;
+        const species = Math.floor(Math.random() * N) + 1;
         if (placePuyo(column, species)) {
             currentPuyo = { column, species, row: 0 };
             animationFrame = requestAnimationFrame(step);
         }
     }
+    // on down arrow, decrease N, on up arrow, increase N
+    if (event.code === "ArrowDown") {
+        N = Math.max(1, N - 1);
+        nInput.property("value", N);
+    }
+    if (event.code === "ArrowUp") {
+        N = Math.min(colors.length - 1, N + 1);
+        nInput.property("value", N);
+    }
+    // on R, reset sim
+    if (event.code === "KeyR") {
+        grid.forEach(row => row.fill(0));
+        currentPuyo = null;
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
+        drawGrid();
+    }
 });
+
 
 // Initial draw
 drawGrid();

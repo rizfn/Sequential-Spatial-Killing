@@ -48,7 +48,7 @@ $\\$
 
 ---
 
-<iframe width="100%" height="100%" src="https://rizfn.github.io/Sequential-Spatial-Killing/visualizations/puyopuyo" style="border: 1px solid #888888">
+<iframe width="100%" height="100%" src="https://rizfn.github.io/Sequential-Spatial-Killing/visualizations/puyopuyo/gravity.html" style="border: 1px solid #888888">
 
 </iframe>
 

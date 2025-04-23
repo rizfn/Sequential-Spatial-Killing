@@ -1,0 +1,43 @@
+@font-face {
+    font-family: 'PuyoFont';
+    src: url('font/puyofont.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+body {
+    display: flex;
+    margin: 0;
+    background-color: black;
+    color: #fac9d5;
+    font-family: 'PuyoFont', sans-serif; /* Use the custom font */
+    font-size: 2rem;
+}
+
+svg#puyogrid {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('img/Witch_PPT2.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+div#controls {
+    display: flex;
+    flex-direction: row;
+    margin: 1rem;
+    justify-content: end;
+    align-items: start;
+    font-family: inherit;
+}
+
+button {
+    background-color: #444444;
+    font-size: inherit;
+    font-family: inherit;
+}
