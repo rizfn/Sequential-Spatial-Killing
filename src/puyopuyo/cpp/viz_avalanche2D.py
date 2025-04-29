@@ -89,5 +89,68 @@ def viz_2D():
     plt.show()
 
 
+def avg_and_max_avalanche_sizes_vs_N():
+    L = 64
+    N_list = np.arange(2, 12)
+    steps = 1024
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Use a colormap (e.g., rainbow) to assign colors based on N_species
+    colormap = plt.get_cmap("rainbow", len(N_list))
+
+    avg_sizes = []
+    max_sizes = []
+
+    for i, N in enumerate(N_list):
+        try:
+            # Load data
+            step, mass, height, avalanches, total_eliminated = np.loadtxt(
+                f"src/puyopuyo/cpp/outputs/avalanche2D/L_{L}_N_{N}_steps_{steps}.tsv",
+                delimiter="\t",
+                skiprows=1,
+                unpack=True,
+            )
+
+            # Calculate average and maximum avalanche sizes
+            avg_size = np.mean(avalanches)
+            max_size = np.max(avalanches)
+
+            avg_sizes.append(avg_size)
+            max_sizes.append(max_size)
+
+        except OSError:
+            print(f"Warning: File for L={L}, N={N} not found. Skipping.")
+            avg_sizes.append(None)
+            max_sizes.append(None)
+
+    # Filter out None values for plotting
+    valid_N = [N for i, N in enumerate(N_list) if avg_sizes[i] is not None]
+    valid_avg_sizes = [size for size in avg_sizes if size is not None]
+    valid_max_sizes = [size for size in max_sizes if size is not None]
+
+    # Plot average avalanche size vs. N
+    ax1.plot(valid_N, valid_avg_sizes, marker="o", color="blue", label="Average Avalanche Size")
+    ax1.set_xlabel("Number of Species (N)")
+    ax1.set_ylabel("Average Avalanche Size")
+    ax1.set_title("Average Avalanche Size vs. N")
+    ax1.grid()
+    ax1.legend()
+
+    # Plot largest avalanche size vs. N
+    ax2.plot(valid_N, valid_max_sizes, marker="o", color="red", label="Largest Avalanche Size")
+    ax2.set_xlabel("Number of Species (N)")
+    ax2.set_ylabel("Largest Avalanche Size")
+    ax2.set_title("Largest Avalanche Size vs. N")
+    ax2.grid()
+    ax2.legend()
+
+    # Save the plot
+    plt.tight_layout()
+    plt.savefig(f"src/puyopuyo/cpp/plots/avalanche/avg_and_max_sizes_vs_N_{L}.png", dpi=300)
+    plt.show()
+
+
 if __name__ == "__main__":
-    viz_2D()
+    avg_and_max_avalanche_sizes_vs_N()
+    # viz_2D()
