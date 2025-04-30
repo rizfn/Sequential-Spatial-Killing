@@ -1,3 +1,4 @@
 sequentialKillingEnv/
 *.exe
 src/puyopuyo/cpp/outputs/*
+src/puyopuyo/periodicCpp/outputs/*
