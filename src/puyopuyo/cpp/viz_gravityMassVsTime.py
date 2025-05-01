@@ -202,6 +202,78 @@ def drift_vs_N():
     plt.savefig(f"src/puyopuyo/cpp/plots/drift_vs_N.png", dpi=300)
     plt.show()
 
+def drift_vs_inverseN():
+    N_list = np.arange(2, 21)
+    steps = 1024
+    dims = [1, 2, 3, 4]
+    Ls = {1: None, 2: 128, 3: 24, 4: 8}
+
+    interval = 100
+    n_bins = steps // interval
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    axes = axes.flatten()
+
+    for ax, dim in zip(axes, dims):
+        slopes = []
+        slope_errs = []
+
+        for N in N_list:
+            # load data
+            if dim == 1:
+                fn = f"src/puyopuyo/cpp/outputs/gravity1D/N_{N}_steps_{steps}.tsv"
+                step, mass = np.loadtxt(fn, delimiter="\t", skiprows=1, unpack=True)
+            else:
+                L = Ls[dim]
+                fn = f"src/puyopuyo/cpp/outputs/gravity{dim}D/L_{L}_N_{N}_steps_{steps}.tsv"
+                data = np.loadtxt(fn, delimiter="\t", skiprows=1, unpack=True)
+                step, mass = data[0], data[1]
+
+            # bin into intervals and compute mean mass
+            t_bins = []
+            m_means = []
+            for b in range(n_bins):
+                start = b * interval
+                end = min((b+1) * interval, len(step))
+                t_slice = step[start:end]
+                m_slice = mass[start:end]
+                if len(m_slice) == 0:
+                    continue
+                t_bins.append(np.mean(t_slice))
+                m_means.append(np.mean(m_slice))
+
+            t_bins = np.array(t_bins)
+            m_means = np.array(m_means)
+
+            # linear fit on the binned means
+            slope, intercept = np.polyfit(t_bins, m_means, 1)
+
+            # estimate error on slope from residuals
+            m_pred = slope * t_bins + intercept
+            resid = m_means - m_pred
+            slope_err = np.std(resid) / np.sqrt(np.sum((t_bins - np.mean(t_bins))**2))
+
+            slopes.append(slope)
+            slope_errs.append(slope_err)
+
+        # plot drift vs N with error bars
+        ax.errorbar(1/N_list, slopes, yerr=slope_errs,
+                    fmt='o-', capsize=4)
+        ax.set_title(f"{dim}D drift vs N")
+        ax.set_xlabel("Number of species N")
+        ax.set_ylabel("Drift (mass/time)")
+        ax.grid()
+
+        if dim == 1:
+            x_vals = np.linspace(1/N_list[0], 1/N_list[-1], 100)
+            ax.plot(x_vals, 1-2*x_vals, color="grey", linestyle="--", label="1-2/N")
+
+    plt.tight_layout()
+    plt.savefig(f"src/puyopuyo/cpp/plots/drift_vs_invN.png", dpi=300)
+    plt.show()
+
+
+
 
 if __name__ == "__main__":
     # viz_1D()
@@ -209,3 +281,4 @@ if __name__ == "__main__":
     # viz_3D()
     # viz_4D()
     drift_vs_N()
+    drift_vs_inverseN()
