@@ -3,3 +3,4 @@ sequentialKillingEnv/
 src/edenPuyoPuyo/outputs/*
 src/puyopuyo/cpp/outputs/*
 src/puyopuyo/periodicCpp/outputs/*
+src/probabilityPuyoPuyo/outputs/*
