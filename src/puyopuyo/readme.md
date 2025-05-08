@@ -59,3 +59,34 @@ Master equation:
 $$
 \frac{\partial P}{\partial t} = \frac12 \frac{\partial^2 P}{\partial h^2} + \left(\frac2N-1\right) \frac{\partial P}{\partial h} \\
 $$
+
+---
+
+#### Try 2D:
+
+You have, on average 2 neighbours (one below, one to the side). The probability of them being the same is $1/N$. The probability of them being different is $1-1/N$.
+
+If they're the same, you can grow by dropping a new species that's different, which has probability $1-1/N$. If they're different, the dropped cell must b different from both neighbours, so you have probability $1 - 2/N$
+
+$$
+ P_{\text{growth}} = \frac{1}{N} \cdot \left(1 - \frac{1}{N}\right) + \left(1 - \frac{1}{N}\right) \cdot \frac{N - 2}{N}
+$$
+Combine the terms: 
+$$ P_{\text{growth}} = \frac{N - 1}{N^2} + \frac{(N - 1)(N - 2)}{N^2} $$
+Factorize: 
+$$ P_{\text{growth}} = \frac{N - 1}{N^2} \left[1 + (N - 2)\right] $$
+Finally,
+$$ P_{\text{growth}} = \left(\frac{N - 1}{N}\right)^2 $$
+
+
+---
+
+#### 3D:
+
+On average, you have 3 neighbours (one below, and 2 on the same layer). Not exact, as it's biased lower... but anyway.
+
+$$ P_\text{growth} = \left[\text{all same col}\right]\left[P(\text{different from 1 col})\right] + \left[\text{2 same col}\right]\left[P(\text{different from 2 col})\right] + \left[\text{all diff col}\right]\left[P(\text{different from 3 col})\right]  $$
+
+$$ P_\text{growth} = \left[\frac1{N^2}\right]\left[1-\frac1N\right] + \left[\frac{3(N-1)}{N^2}\right]\left[1-\frac2N\right] + \left[\frac{(N-1)(N-2)}{N^2}\right]\left[1-\frac3N\right]  $$
+
+$$ P_\text{growth} = \frac{N-1}{N^3} \big(1+3(N-2) + (N-2)(N-3) \big)$$
