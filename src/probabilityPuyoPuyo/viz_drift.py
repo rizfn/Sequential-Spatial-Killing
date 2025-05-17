@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+import re
+import collections
 
 def mass_vs_time():
     steps = 1024 * 2
@@ -251,7 +253,104 @@ def drift_vs_invEntropy():
     plt.savefig(f"src/probabilityPuyoPuyo/plots/drift/driftVsInvEntropy.png", dpi=300)
     plt.show()
 
+
+def drift_vs_invEntropy_randomProbs():
+    data_dir = "src/probabilityPuyoPuyo/outputs/randomProbabilities2D"
+    files = glob.glob(f"{data_dir}/L_*_P_*.tsv")
+
+    drifts = []
+    drift_errs = []
+    inv_entropies = []
+
+    interval = 100
+    tolerance = 0.01
+
+    prob_count = collections.Counter()
+
+    for file in files:
+        # Extract probabilities from filename using regex
+        match = re.search(r'_P_([0-9\.\-]+)\.tsv$', file)
+        if not match:
+            continue
+        prob_str = match.group(1)
+        probs = np.array([float(p) for p in prob_str.split('-')])
+        probs /= probs.sum()  # Ensure normalization
+
+        prob_count[len(probs)] += 1  # Count by number of probabilities
+
+        # Calculate entropy
+        S = -np.sum(probs * np.log(probs))
+        inv_S = 1 / S
+
+        # Load data
+        try:
+            step, mass = np.loadtxt(file, delimiter="\t", skiprows=1, unpack=True)
+        except Exception as e:
+            print(f"Could not load {file}: {e}")
+            continue
+
+        # Bin into intervals and compute mean normalized mass
+        n_bins = len(step) // interval
+        t_bins = []
+        m_means = []
+        for b in range(n_bins):
+            start = b * interval
+            end = min((b+1) * interval, len(step))
+            t_slice = step[start:end]
+            m_slice = mass[start:end]
+            if len(m_slice) == 0:
+                continue
+            t_bins.append(np.mean(t_slice))
+            m_means.append(np.mean(m_slice))
+
+        t_bins = np.array(t_bins)
+        m_means = np.array(m_means)
+
+        if len(t_bins) < 2:
+            continue
+
+        # Linear fit on the binned means
+        slope, intercept = np.polyfit(t_bins, m_means, 1)
+
+        # Estimate error on slope from residuals
+        m_pred = slope * t_bins + intercept
+        resid = m_means - m_pred
+        slope_err = np.std(resid) / np.sqrt(np.sum((t_bins - np.mean(t_bins))**2))
+
+        drifts.append(slope)
+        drift_errs.append(slope_err)
+        inv_entropies.append(inv_S)
+
+    # Print the number of files for each N
+    for N, count in prob_count.items():
+        print(f"{count} files have {N} probabilities")
+
+
+    # Convert to arrays and sort by inv_entropy for plotting
+    drifts = np.array(drifts)
+    drift_errs = np.array(drift_errs)
+    inv_entropies = np.array(inv_entropies)
+    sort_idx = np.argsort(inv_entropies)
+    drifts = drifts[sort_idx]
+    drift_errs = drift_errs[sort_idx]
+    inv_entropies = inv_entropies[sort_idx]
+
+    # Plot
+    plt.figure(figsize=(8, 6))
+    plt.errorbar(inv_entropies, drifts, yerr=drift_errs, fmt='o', capsize=4, label="All points")
+    plt.xlabel("1 / Entropy S")
+    plt.ylabel("Drift (mass/time)")
+    plt.title("Drift vs 1/Entropy (random probabilities)")
+    plt.grid()
+
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("src/probabilityPuyoPuyo/plots/drift/driftVsInvEntropy_randomProbs.png", dpi=300)
+    plt.show()
+
 if __name__ == "__main__":
     # mass_vs_time()
     # drift_vs_inverseN()
-    drift_vs_invEntropy()
+    # drift_vs_invEntropy()
+    drift_vs_invEntropy_randomProbs()
