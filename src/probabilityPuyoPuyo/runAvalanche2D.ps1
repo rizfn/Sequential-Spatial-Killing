@@ -1,9 +1,9 @@
 # Define constants for steps and L
-$steps = 1024 * 8
-$L = 64
+$steps = 1024 * 32
+$L = 68
 
 # Define the range of N_species values
-$N_species_values = @(6, 7)
+$N_species_values = @(6)
 
 # Define the number of simulations
 $N_sims = 6
@@ -29,7 +29,8 @@ foreach ($N_species in $N_species_values) {
             param($scriptDir, $L, $N_species, $steps)
 
             # Run the executable with the given parameters
-            & "$scriptDir\avalanche2D.exe" $L $N_species $steps
+            # & "$scriptDir\avalanche2D.exe" $L $N_species $steps
+            & "$scriptDir\onlyAvalanche2D.exe" $L $N_species $steps
 
             # Check if the process succeeded
             if ($LASTEXITCODE -ne 0) {

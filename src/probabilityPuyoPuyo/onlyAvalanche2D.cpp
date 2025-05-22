@@ -164,36 +164,13 @@ void run(std::ofstream &file, int L, std::discrete_distribution<> &species_dist,
             movedSites = newMovedSites;
         }
 
-        int filled_cells = 0;
-        for (int col = 0; col < L; ++col)
-            for (int row = 0; row < H; ++row)
-                if (lattice[row][col] != 0)
-                    filled_cells++;
-
-        std::vector<int> heights(L, 0);
-        for (int c = 0; c < L; ++c)
-            for (int r = 0; r < H; ++r)
-                if (lattice[r][c])
-                {
-                    heights[c] = H - r;
-                    break;
-                }
-
-        file << std::fixed << std::setprecision(6)
-             << step << "\t"
-             << filled_cells << "\t"
-             << avalancheCount << "\t"
-             << totalEliminated << "\t"
-             << heights[0] << "\t";
-        for (int c = 0; c < L; ++c)
-        {
-            int next = (c + 1) % L;
-            int slope = heights[next] - heights[c];
-            file << slope;
-            if (c < L - 1)
-                file << ",";
+        // Only write if there was an avalanche
+        if (avalancheCount > 0) {
+            file << std::fixed << std::setprecision(6)
+                 << step << "\t"
+                 << avalancheCount << "\t"
+                 << totalEliminated << "\n";
         }
-        file << "\n";
 
         step += 1.0 / L;
     }
@@ -227,12 +204,12 @@ int main(int argc, char *argv[])
     std::string exePath = argv[0];
     std::string exeDir = std::filesystem::path(exePath).parent_path().string();
     std::ostringstream filePathStream;
-    filePathStream << exeDir << "\\outputs\\avalanche2D\\L_" << L << "_P_" << probStr << ".tsv";
+    filePathStream << exeDir << "\\outputs\\avalanche2D\\onlyAvalanche\\L_" << L << "_P_" << probStr << ".tsv";
     std::string filePath = filePathStream.str();
 
     std::ofstream file;
     file.open(filePath);
-    file << "step\tmass\tavalanches\ttotal_eliminated\tfirst_col_height\tslope_distribution\n";
+    file << "step\tavalanches\ttotal_eliminated\n";
 
     run(file, L, species_dist, STEPS_PER_LATTICEPOINT);
 

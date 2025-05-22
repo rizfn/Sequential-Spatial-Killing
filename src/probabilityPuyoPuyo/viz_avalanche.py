@@ -204,5 +204,52 @@ def main():
     times = [256, 1024, 4096, 8192]
     plotInterface(L, S_list, t_dict, heights_dict, times, plot_dir)
 
+
+def mainOnlyAvalanche():
+    L = 64
+    data_dir = "src/probabilityPuyoPuyo/outputs/avalanche2D/onlyAvalanche"
+    plot_dir = "src/probabilityPuyoPuyo/plots"
+
+    # Preload and preprocess all data
+    avalanches_dict = {}
+    total_elim_dict = {}
+    S_list = []
+    file_info = []
+
+    print("Starting to load data...")
+
+    files = glob.glob(f"{data_dir}/L_{L}_P_*.tsv")
+    for file in tqdm(files):
+        match = re.search(r'_P_([0-9\.\-]+)\.tsv$', file)
+        if not match:
+            print(f"Warning: could not parse probabilities from {file}")
+            continue
+        prob_str = match.group(1)
+        probs = np.array([float(p) for p in prob_str.split('-')])
+        probs /= probs.sum()
+        S = entropy_from_probs(probs)
+        S_list.append(S)
+        file_info.append((S, file, probs))
+
+    # Sort by entropy
+    S_list = np.array(S_list)
+    sort_idx = np.argsort(S_list)
+    S_list = S_list[sort_idx]
+    file_info = [file_info[i] for i in sort_idx]
+
+    for S, file, probs in tqdm(file_info):
+        try:
+            raw = np.loadtxt(file, delimiter="\t", skiprows=1, dtype=str)
+        except OSError:
+            print(f"Warning: missing {file}")
+            continue
+        avalanches = raw[:,1].astype(int)
+        total_elim = raw[:,2].astype(int)
+        avalanches_dict[S] = avalanches
+        total_elim_dict[S] = total_elim
+
+    plot_avalanche_distributions(L, S_list, avalanches_dict, total_elim_dict, plot_dir)
+
 if __name__ == "__main__":
-    main()
+    # main()
+    mainOnlyAvalanche()
