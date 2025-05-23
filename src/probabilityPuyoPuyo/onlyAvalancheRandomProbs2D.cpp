@@ -1,11 +1,13 @@
 #include <random>
 #include <vector>
+#include <unordered_map>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
 #include <queue>
+#include <set>
 #include <cmath>
 #include <algorithm>
 
@@ -19,22 +21,25 @@ std::random_device rd;
 std::mt19937 gen(rd());
 
 constexpr int DEFAULT_L = 128;
-constexpr double DEFAULT_N_SPECIES = 6.0;
+constexpr int DEFAULT_N_SPECIES = 6;
 constexpr int DEFAULT_STEPS_PER_LATTICEPOINT = 128;
 
-// Helper to create a discrete distribution for floating-point N_SPECIES
-std::discrete_distribution<> createSpeciesDistribution(double N_SPECIES, std::vector<double>& weights_out) {
-    int n_int = static_cast<int>(std::floor(N_SPECIES));
-    double frac = N_SPECIES - n_int;
-    std::vector<double> weights;
-    for (int i = 0; i < n_int; ++i) {
-        weights.push_back(1.0);
+// Generate a sorted random probability vector and return a discrete_distribution
+std::discrete_distribution<> createRandomSpeciesDistribution(std::vector<double> &sorted_probs, int N_SPECIES)
+{
+    std::vector<double> weights(N_SPECIES);
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    double sum = 0.0;
+    for (int i = 0; i < N_SPECIES; ++i)
+    {
+        weights[i] = dis(gen);
+        sum += weights[i];
     }
-    if (frac > 0) {
-        weights.push_back(frac);
-    }
-    weights_out = weights;
-    return std::discrete_distribution<>(weights.begin(), weights.end());
+    for (int i = 0; i < N_SPECIES; ++i)
+        weights[i] /= sum;
+    sorted_probs = weights;
+    std::sort(sorted_probs.begin(), sorted_probs.end(), std::greater<>());
+    return std::discrete_distribution<>(sorted_probs.begin(), sorted_probs.end());
 }
 
 void placePuyo(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>> &movedSites,
@@ -128,10 +133,8 @@ void fall(std::vector<std::vector<int>> &lattice, std::vector<std::vector<bool>>
     }
 }
 
-void run(std::ofstream &file, int L, double N_SPECIES, int STEPS_PER_LATTICEPOINT)
+void run(std::ofstream &file, int L, std::discrete_distribution<> &species_dist, int STEPS_PER_LATTICEPOINT)
 {
-    std::vector<double> weights;
-    std::discrete_distribution<> species_dist = createSpeciesDistribution(N_SPECIES, weights);
     std::uniform_int_distribution<> dis_l(0, L - 1);
 
     int H = STEPS_PER_LATTICEPOINT;
@@ -176,30 +179,39 @@ void run(std::ofstream &file, int L, double N_SPECIES, int STEPS_PER_LATTICEPOIN
 int main(int argc, char *argv[])
 {
     int L = DEFAULT_L;
-    double N_SPECIES = DEFAULT_N_SPECIES;
+    int N_SPECIES = DEFAULT_N_SPECIES;
     int STEPS_PER_LATTICEPOINT = DEFAULT_STEPS_PER_LATTICEPOINT;
     if (argc > 1)
         L = std::stoi(argv[1]);
     if (argc > 2)
-        N_SPECIES = std::stod(argv[2]);
+        N_SPECIES = std::stoi(argv[2]);
     if (argc > 3)
         STEPS_PER_LATTICEPOINT = std::stoi(argv[3]);
 
-    // Generate weights for filename
-    std::vector<double> weights;
-    createSpeciesDistribution(N_SPECIES, weights);
+    // Generate sorted random probabilities
+    std::vector<double> sorted_probs;
+    std::discrete_distribution<> species_dist = createRandomSpeciesDistribution(sorted_probs, N_SPECIES);
+
+    // Build probability string for filename
+    std::ostringstream probStream;
+    probStream << std::fixed << std::setprecision(4);
+    for (size_t i = 0; i < sorted_probs.size(); ++i) {
+        if (i > 0) probStream << "-";
+        probStream << sorted_probs[i];
+    }
+    std::string probStr = probStream.str();
 
     std::string exePath = argv[0];
     std::string exeDir = std::filesystem::path(exePath).parent_path().string();
     std::ostringstream filePathStream;
-    filePathStream << exeDir << "\\outputs\\avalanche2D\\onlyAvalanche\\L_" << L << "_N_" << N_SPECIES << ".tsv";
+    filePathStream << exeDir << "\\outputs\\avalanche2D\\onlyAvalancheRandomProbs\\L_" << L << "_P_" << probStr << ".tsv";
     std::string filePath = filePathStream.str();
 
     std::ofstream file;
     file.open(filePath);
     file << "step\tavalanches\ttotal_eliminated\n";
 
-    run(file, L, N_SPECIES, STEPS_PER_LATTICEPOINT);
+    run(file, L, species_dist, STEPS_PER_LATTICEPOINT);
 
     file.close();
 
