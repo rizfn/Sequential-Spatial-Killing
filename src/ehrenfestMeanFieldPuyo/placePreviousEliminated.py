@@ -10,6 +10,9 @@ def simulate_urn(N_colors, K_selections, N_steps, initial_total_balls):
     # Initialize urn with equal number of balls of each color
     initial_balls_per_color = initial_total_balls // N_colors
     urn = np.full(N_colors, initial_balls_per_color, dtype=int)
+    
+    # Track the most abundant color(s) from the last elimination
+    last_eliminated_color = None
 
     for step in range(N_steps):
         total_balls = np.sum(urn)
@@ -32,13 +35,31 @@ def simulate_urn(N_colors, K_selections, N_steps, initial_total_balls):
         # Check if all drawn balls are unique (no duplicates)
         if len(unique_colors) == K_selections:
             # All K balls are different colors - put them back and add one extra
-            random_color = np.random.randint(0, N_colors)
+            # Add the color that was most abundant in the last elimination
+            if last_eliminated_color is not None:
+                random_color = last_eliminated_color
+            else:
+                # First time adding, choose randomly
+                random_color = np.random.randint(0, N_colors)
             urn[random_color] += 1
         else:
             # There are duplicates - remove all balls of colors that appeared more than once
+            # Track which color had the most duplicates
+            max_duplicate_count = 0
+            colors_with_max_duplicates = []
+            
             for color, count in zip(unique_colors, counts):
                 if count > 1:
                     urn[color] -= count
+                    if count > max_duplicate_count:
+                        max_duplicate_count = count
+                        colors_with_max_duplicates = [color]
+                    elif count == max_duplicate_count:
+                        colors_with_max_duplicates.append(color)
+            
+            # Remember the most abundant eliminated color (random if tie)
+            if colors_with_max_duplicates:
+                last_eliminated_color = np.random.choice(colors_with_max_duplicates)
     
     return np.sum(urn)
 
@@ -96,8 +117,8 @@ def main():
     plt.tight_layout()
     
     os.makedirs("src/ehrenfestMeanFieldPuyo/plots/massVsTime", exist_ok=True)
-    plt.savefig(f"src/ehrenfestMeanFieldPuyo/plots/massVsTime/noStrategy_steps_{N_steps}_init_{initial_total_balls}.png", dpi=300)
-    print(f"Heatmap saved to src/ehrenfestMeanFieldPuyo/plots/massVsTime/noStrategy_steps_{N_steps}_init_{initial_total_balls}.png")
+    plt.savefig(f"src/ehrenfestMeanFieldPuyo/plots/massVsTime/prevEliminatedStrategy_steps_{N_steps}_init_{initial_total_balls}.png", dpi=300)
+    print(f"Heatmap saved to src/ehrenfestMeanFieldPuyo/plots/massVsTime/prevEliminatedStrategy_steps_{N_steps}_init_{initial_total_balls}.png")
 
 
 if __name__ == "__main__":

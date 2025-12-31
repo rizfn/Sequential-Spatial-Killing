@@ -32,7 +32,10 @@ def simulate_urn(N_colors, K_selections, N_steps, initial_total_balls):
         # Check if all drawn balls are unique (no duplicates)
         if len(unique_colors) == K_selections:
             # All K balls are different colors - put them back and add one extra
-            random_color = np.random.randint(0, N_colors)
+            # Add to the color with minimum count (random if tie)
+            min_count = np.min(urn)
+            min_colors = np.where(urn == min_count)[0]
+            random_color = np.random.choice(min_colors)
             urn[random_color] += 1
         else:
             # There are duplicates - remove all balls of colors that appeared more than once
@@ -96,8 +99,8 @@ def main():
     plt.tight_layout()
     
     os.makedirs("src/ehrenfestMeanFieldPuyo/plots/massVsTime", exist_ok=True)
-    plt.savefig(f"src/ehrenfestMeanFieldPuyo/plots/massVsTime/noStrategy_steps_{N_steps}_init_{initial_total_balls}.png", dpi=300)
-    print(f"Heatmap saved to src/ehrenfestMeanFieldPuyo/plots/massVsTime/noStrategy_steps_{N_steps}_init_{initial_total_balls}.png")
+    plt.savefig(f"src/ehrenfestMeanFieldPuyo/plots/massVsTime/minStrategy_steps_{N_steps}_init_{initial_total_balls}.png", dpi=300)
+    print(f"Heatmap saved to src/ehrenfestMeanFieldPuyo/plots/massVsTime/minStrategy_steps_{N_steps}_init_{initial_total_balls}.png")
 
 
 if __name__ == "__main__":
