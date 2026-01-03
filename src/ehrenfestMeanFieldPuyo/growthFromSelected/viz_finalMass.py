@@ -208,7 +208,7 @@ def main_probabilities():
         plt.tight_layout()
         
         # Save plot
-        plot_dir = os.path.join(script_dir, "plots")
+        plot_dir = os.path.join(script_dir, "plots/finalMass")
         os.makedirs(plot_dir, exist_ok=True)
         plot_path = os.path.join(plot_dir, f"finalMassProbabilities_rate{rate}_steps{N_steps}_init{initial_total_balls}.png")
         plt.savefig(plot_path, dpi=300)
