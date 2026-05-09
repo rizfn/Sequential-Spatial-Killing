@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXE="$SCRIPT_DIR/finalMass"
 
 L=64
-N=16
+N=128
 STEPS=1000
 N_SIMS=20
 STARTING_SIM_NO=${1:-0}

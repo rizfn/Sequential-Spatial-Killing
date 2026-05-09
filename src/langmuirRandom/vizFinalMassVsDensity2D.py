@@ -6,7 +6,7 @@ import re
 
 def main():
     L = 64
-    N = 16
+    N = 128
     STEPS = 1000
 
     files = glob(f"src/langmuirRandom/outputs/finalMass/L_{L}_N_{N}/rho_*_steps_{STEPS}_sim_*.txt")
