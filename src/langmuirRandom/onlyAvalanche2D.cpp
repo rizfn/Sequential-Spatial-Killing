@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <queue>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 
 #pragma GCC optimize("inline", "unroll-loops", "no-stack-protector")
@@ -21,25 +22,37 @@ std::mt19937 gen(rd());
 constexpr int DEFAULT_L = 128;
 constexpr int DEFAULT_N_SPECIES = 6;
 constexpr int DEFAULT_STEPS_PER_LATTICEPOINT = 128;
+constexpr double DEFAULT_RHO = 0.5;
 
 inline int index2D(int row, int col, int L)
 {
     return row * L + col;
 }
 
-std::vector<std::vector<bool>> createInteractionMatrix(int nSpecies)
+std::vector<std::vector<bool>> createInteractionMatrix(int nSpecies, double rho)
 {
+    rho = std::clamp(rho, 0.0, 1.0);
+
     std::vector<std::vector<bool>> J(nSpecies + 1, std::vector<bool>(nSpecies + 1, false));
-    std::bernoulli_distribution dis_interaction(0.5);
+    std::vector<std::pair<int, int>> upperEntries;
+    upperEntries.reserve(nSpecies * (nSpecies + 1) / 2);
 
     for (int i = 1; i <= nSpecies; ++i)
     {
         for (int j = i; j <= nSpecies; ++j)
-        {
-            bool canAnnihilate = dis_interaction(gen);
-            J[i][j] = canAnnihilate;
-            J[j][i] = canAnnihilate;
-        }
+            upperEntries.emplace_back(i, j);
+    }
+
+    std::shuffle(upperEntries.begin(), upperEntries.end(), gen);
+
+    int onesTarget = static_cast<int>(std::llround(rho * static_cast<double>(upperEntries.size())));
+    onesTarget = std::clamp(onesTarget, 0, static_cast<int>(upperEntries.size()));
+
+    for (int idx = 0; idx < onesTarget; ++idx)
+    {
+        auto [i, j] = upperEntries[idx];
+        J[i][j] = true;
+        J[j][i] = true;
     }
 
     for (int i = 1; i <= nSpecies; ++i)
@@ -198,13 +211,14 @@ void fall(std::vector<int> &lattice, bool *movedSites, int L, int H)
         movedSites[i] = newMovedSites[i];
 }
 
-void run(std::ofstream &file, int L, int N_SPECIES, int STEPS_PER_LATTICEPOINT)
+void run(std::ofstream &file, int L, int N_SPECIES, int STEPS_PER_LATTICEPOINT, double rho)
 {
     std::uniform_int_distribution<> dis_l(0, L - 1);
     std::uniform_int_distribution<> dis_species(1, N_SPECIES);
-    std::vector<std::vector<bool>> J = createInteractionMatrix(N_SPECIES);
+    std::vector<std::vector<bool>> J = createInteractionMatrix(N_SPECIES, rho);
 
     writeInteractionMatrix(file, J);
+    file << "# rho\t" << std::fixed << std::setprecision(6) << rho << "\n";
     file << "# step\tavalanches\ttotal_eliminated\n";
 
     int H = STEPS_PER_LATTICEPOINT;
@@ -285,6 +299,7 @@ int main(int argc, char *argv[])
     int L = DEFAULT_L;
     int N_SPECIES = DEFAULT_N_SPECIES;
     int STEPS_PER_LATTICEPOINT = DEFAULT_STEPS_PER_LATTICEPOINT;
+    double RHO = DEFAULT_RHO;
     int SIM_NO = 0;
     if (argc > 1)
         L = std::stoi(argv[1]);
@@ -293,11 +308,17 @@ int main(int argc, char *argv[])
     if (argc > 3)
         STEPS_PER_LATTICEPOINT = std::stoi(argv[3]);
     if (argc > 4)
-        SIM_NO = std::stoi(argv[4]);
+        RHO = std::stod(argv[4]);
+    if (argc > 5)
+        SIM_NO = std::stoi(argv[5]);
+
+    RHO = std::clamp(RHO, 0.0, 1.0);
 
     std::filesystem::path exeDir = std::filesystem::path(argv[0]).parent_path();
     std::ostringstream fileNameStream;
-    fileNameStream << "L_" << L << "_N_" << N_SPECIES << "_" << SIM_NO << ".tsv";
+    fileNameStream << "L_" << L << "_N_" << N_SPECIES
+                   << "_rho_" << std::fixed << std::setprecision(4) << RHO
+                   << "_" << SIM_NO << ".tsv";
     std::filesystem::path filePath = exeDir / "outputs" / "avalanche2D" / fileNameStream.str();
 
     std::filesystem::create_directories(filePath.parent_path());
@@ -305,7 +326,7 @@ int main(int argc, char *argv[])
     std::ofstream file;
     file.open(filePath);
 
-    run(file, L, N_SPECIES, STEPS_PER_LATTICEPOINT);
+    run(file, L, N_SPECIES, STEPS_PER_LATTICEPOINT, RHO);
 
     file.close();
 
