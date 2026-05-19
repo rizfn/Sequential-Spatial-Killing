@@ -11,10 +11,10 @@ def main():
     # Configuration parameters to match C++ output
     L = 128
     T = 8000
-    dt = 0.001
+    dt = 0.01
     a = 1
     c_val = 1
-    lambda_abs = 0
+    lambda_abs = 10
 
     print("Plotting results from C++ raw data...")
     param_str = f"L{L}_T{T}_dt{dt}_a{a}_c{c_val}_lam{lambda_abs}"

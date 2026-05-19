@@ -23,10 +23,10 @@ static auto _ = []() {
 // High stability, fast constants
 constexpr int L = 128;
 constexpr double T = 8000.0;
-constexpr double dt = 0.001;
+constexpr double dt = 0.01;
 constexpr double a = 1;
 constexpr double c_val = 1.0;
-constexpr double lambda_abs = 0;
+constexpr double lambda_abs = 10;
 constexpr double dx = 0.1;
 constexpr double noise_strength = 0.1;
 constexpr int num_runs = 12;
@@ -72,7 +72,7 @@ void run_single_sim(int seed, int N, std::vector<double>& out_roughness, std::ve
     double inv_2dx = 1.0 / (2.0 * dx);
     double inv_3 = 1.0 / 3.0;
 
-    auto calc_dhdt = [&](const std::vector<double>& current_h, std::vector<double>& out_dhdt) {
+    auto calc_explicit = [&](const std::vector<double>& current_h, std::vector<double>& out_explicit) {
         for (int x = 0; x < array_size; ++x) {
             int left = (x == 0) ? array_size - 1 : x - 1;
             int right = (x == array_size - 1) ? 0 : x + 1;
@@ -80,36 +80,100 @@ void run_single_sim(int seed, int N, std::vector<double>& out_roughness, std::ve
             double dp_fwd = (current_h[right] - current_h[x]) * inv_dx;
             double dp_bwd = (current_h[x] - current_h[left]) * inv_dx;
             
-            double lap_h = (dp_fwd - dp_bwd) * inv_dx;
-
             double grad_h_sq = (dp_fwd * dp_fwd + dp_fwd * dp_bwd + dp_bwd * dp_bwd) * inv_3;
             
             double grad_h_central = (current_h[right] - current_h[left]) * inv_2dx;
             double abs_grad_h = std::abs(grad_h_central);
 
-            out_dhdt[x] = c_diff * lap_h - c_nonlin2 * grad_h_sq - c_nonlin1 * abs_grad_h;
+            out_explicit[x] = - c_nonlin2 * grad_h_sq - c_nonlin1 * abs_grad_h;
         }
     };
 
-    for (long long i = 0; i < steps; ++i) {
-        calc_dhdt(h, k1);
+    // Thomas algorithm for tridiagonal system augmented with Sherman-Morrison for cyclic boundaries
+    auto solve_cyclic_tridiagonal = [&](double a, double b, double c, const std::vector<double>& rhs, std::vector<double>& out) {
+        int n = array_size;
+        std::vector<double> cp(n, 0.0);
+        std::vector<double> dp1(n, 0.0);
+        std::vector<double> dp2(n, 0.0);
+        double gamma = -b;
 
-        for (int x = 0; x < array_size; ++x) {
-            noise[x] = noise_strength * dist(gen) * sqrt_dt_dx;
-            h_tmp[x] = h[x] + k1[x] * dt + noise[x]; 
+        // Modified system 1: standard tridiagonal with b' = b - gamma at 0, b' = b - a*c/gamma at n-1
+        double bb = b - gamma;
+        cp[0] = c / bb;
+        dp1[0] = rhs[0] / bb;
+        dp2[0] = gamma / bb;
+
+        for (int i = 1; i < n - 1; i++) {
+            double m = 1.0 / (b - a * cp[i - 1]);
+            cp[i] = c * m;
+            dp1[i] = (rhs[i] - a * dp1[i - 1]) * m;
+            dp2[i] = (0.0 - a * dp2[i - 1]) * m;
         }
 
-        calc_dhdt(h_tmp, k2);
+        double b_last = b - a * c / gamma;
+        double m = 1.0 / (b_last - a * cp[n - 2]);
+        dp1[n - 1] = (rhs[n - 1] - a * dp1[n - 2]) * m;
+        dp2[n - 1] = (c - a * dp2[n - 2]) * m;
+
+        std::vector<double> y(n, 0.0);
+        std::vector<double> q(n, 0.0);
+        y[n - 1] = dp1[n - 1];
+        q[n - 1] = dp2[n - 1];
+
+        for (int i = n - 2; i >= 0; i--) {
+            y[i] = dp1[i] - cp[i] * y[i + 1];
+            q[i] = dp2[i] - cp[i] * q[i + 1];
+        }
+
+        double num = 0.0;
+        double den = 1.0;
+        num = y[0] + a / gamma * y[n - 1];
+        den = 1.0 + q[0] + a / gamma * q[n - 1];
+
+        double v_dot_y_over_1_plus_v_dot_q = num / den;
+
+        for (int i = 0; i < n; i++) {
+            out[i] = y[i] - q[i] * v_dot_y_over_1_plus_v_dot_q;
+        }
+    };
+
+    double r = c_diff * dt * inv_dx * inv_dx;
+    double diag_b = 1.0 + 2.0 * r;
+    double offdiag_a = -r;
+    double offdiag_c = -r;
+
+    std::vector<double> h_star(array_size, 0.0);
+
+    // Crank-Nicolson-like IMEX RK-SSP2 for stability of non-linear terms
+    for (long long i = 0; i < steps; ++i) {
+        // Stage 1: Explicit Euler predictor + Implicit solve
+        calc_explicit(h, k1);
+        for (int x = 0; x < array_size; ++x) {
+            h_tmp[x] = h[x] + k1[x] * dt;
+        }
+        solve_cyclic_tridiagonal(offdiag_a, diag_b, offdiag_c, h_tmp, h_star);
+
+        // Stage 2: 2nd order corrector + Implicit solve
+        calc_explicit(h_star, k2);
+        for (int x = 0; x < array_size; ++x) {
+            noise[x] = noise_strength * dist(gen) * sqrt_dt_dx;
+            // The un-inverted equation: 0.5 * h_old + 0.5 * (h_star + dt * k2) + noise
+            h_tmp[x] = 0.5 * h[x] + 0.5 * h_star[x] + 0.5 * k2[x] * dt + noise[x];
+        }
+        
+        // The implicit operator here needs to apply to the 0.5 * h_star component exactly like the system requires
+        // Since the operator is linear, we can just solve the standard step using half off-diagonals, 
+        // but for an SSP2 IMEX, applying the same implicit operator solve on the averaged explicit part is standard:
+        solve_cyclic_tridiagonal(offdiag_a, diag_b, offdiag_c, h_tmp, new_h);
 
         for (int x = 0; x < array_size; ++x) {
-            new_h[x] = h[x] + 0.5 * (k1[x] + k2[x]) * dt + noise[x];
             int left = (x == 0) ? array_size - 1 : x - 1;
             int right = (x == array_size - 1) ? 0 : x + 1;
 
             // Histogram local slopes at the tail
             if (i >= steps - tail_steps) {
                 // For observables, central difference is still mathematically unbiased
-                double grad_h_central = (h[right] - h[left]) / (2.0 * dx);
+                double grad_h_central = (new_h[right] - new_h[left]) / (2.0 * dx);
                 int bin = std::floor((grad_h_central - hist_min) / hist_bin_width);
                 if (bin >= 0 && bin < hist_bins) {
                     out_slope_hist[bin]++;
