@@ -97,7 +97,7 @@ def main():
         results[N] = run_ensemble(num_runs, L, T, dt, N, a, c, dx, noise_strength)
     
     # Plotting
-    plots_dir = 'src/continuumPuyo/plots'
+    plots_dir = 'src/continuumPuyo/abs_term/plots'
     os.makedirs(plots_dir, exist_ok=True)
     params_str = f'L{L}_T{T}_dt{dt}_a{a}_c{c}_dx{dx}_ns{noise_strength}_runs{num_runs}'
     

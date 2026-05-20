@@ -18,7 +18,7 @@ def main():
 
     print("Plotting results from C++ raw data...")
     param_str = f"L{L}_T{T}_dt{dt}_a{a}_c{c_val}_lam{lambda_abs}"
-    out_dir = f"src/continuumPuyo/outputs/avalanchePDE_cpp/{param_str}"
+    out_dir = f"src/continuumPuyo/abs_term/outputs/avalanchePDE_cpp/{param_str}"
 
     Ns = [1, 2, 4, 8, 12, 15, 20, 40]
 
@@ -76,7 +76,7 @@ def main():
         ax_r.plot(t_ref, val * (t_ref/t_mid)**(1/3), 'k--', label=r'$t^{1/3}$', zorder=10)
         ax_r.plot(t_ref, val * (t_ref/t_mid)**(1/2), 'k:', label=r'$t^{1/2}$', zorder=10)
 
-    plots_dir = f"src/continuumPuyo/plots/cpp_L{L}_T{T}_dt{dt}_a{a}_c{c_val}_lam{lambda_abs}"
+    plots_dir = f"src/continuumPuyo/abs_term/plots/cpp_L{L}_T{T}_dt{dt}_a{a}_c{c_val}_lam{lambda_abs}"
     os.makedirs(plots_dir, exist_ok=True)
 
     # Formalize Roughness Plot
