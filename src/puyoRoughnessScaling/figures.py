@@ -249,6 +249,125 @@ def fig_growth_anatomy():
     save(fig, "growth_anatomy")
 
 
+# Large-L runs (beyond the crossover l*). L -> steps, per N.
+# l* = Gaussianisation length, measured independently from the increment kurtosis.
+LARGE_L_SPEC = {
+    6:  ({16: 20000, 32: 20000, 64: 20000, 128: 20000, 256: 20000,
+          512: 40000, 1024: 80000, 2048: 250000},
+         20.0, [16, 32, 64, 128, 256], [256, 512, 1024, 2048]),
+    10: ({16: 60000, 32: 60000, 64: 60000, 128: 60000, 256: 150000,
+          512: 250000, 1024: 1200000},
+         31.0, [16, 32, 64, 128], [256, 512, 1024]),
+}
+
+
+def _meanW_spec(L, N, spec):
+    import glob as _g
+    from common import roughness_series, DATA
+    fs = sorted(_g.glob(f"{DATA}/L_{L}_N_{N}_steps_{spec[L]}_sim_*.tsv"))
+    rows, ref = [], None
+    for f in fs:
+        tt, ww = roughness_series(f)
+        if ref is None:
+            ref = tt
+        rows.append(ww[:min(len(ref), len(ww))])
+    n = min(len(r) for r in rows)
+    return ref[:n], np.array([r[:n] for r in rows]).mean(0)
+
+
+def _cost(data, Ls, a, z):
+    cs = []
+    for L in Ls:
+        t, W = data[L]
+        m = t > 0
+        cs.append((np.log(t[m] / L**z), np.log(W[m] / L**a)))
+    lo = max(c[0][0] for c in cs); hi = min(c[0][-1] for c in cs)
+    if hi <= lo:
+        return np.inf
+    g = np.linspace(lo, hi, 120)
+    ys = np.array([np.interp(g, c[0], c[1]) for c in cs])
+    return float(np.mean(np.var(ys, axis=0)))
+
+
+def fig_collapse_largeL(N=6):
+    """Family-Vicsek collapse restricted to L >> l*, testing KPZ vs EW.
+    Below l* the interface has no continuum description, so no asymptotic
+    collapse should be expected there -- and indeed KPZ only works above l*."""
+    spec, lstar, small, large = LARGE_L_SPEC[N]
+    data = {L: _meanW_spec(L, N, spec) for L in spec}
+    panels = [(small, 0.5, 1.5, r"KPZ, $L\lesssim\ell^*$  (fails)"),
+              (large, 0.5, 1.5, r"KPZ, $L\gg\ell^*$  (collapses)"),
+              (large, 0.5, 2.0, r"EW, $L\gg\ell^*$  (excluded)")]
+    fig, axes = plt.subplots(1, 3, figsize=(19, 5.6))
+    for ax, (Ls, a, z, title) in zip(axes, panels):
+        cmap = plt.get_cmap("viridis", len(Ls))
+        for i, L in enumerate(Ls):
+            t, W = data[L]
+            m = t > 0
+            ax.plot(t[m] / L**z, W[m] / L**a, color=cmap(i), label=f"L={L}")
+        c = _cost(data, Ls, a, z)
+        ax.set_xscale("log"); ax.set_yscale("log")
+        ax.set_xlabel(r"$t/L^{z}$"); ax.set_ylabel(r"$W/L^{\alpha}$")
+        ax.set_title(f"{title}\n" fr"$\alpha={a},\ z={z}$   cost$={c:.4f}$", fontsize=14)
+        ax.legend(fontsize=11)
+    fig.suptitle(fr"$N={N}$: the KPZ collapse only works beyond the crossover "
+                 fr"$\ell^*\approx{lstar:.0f}$", fontsize=17)
+    save(fig, f"collapse_N{N}_largeL")
+
+
+def fig_universality_plane(res):
+    """Exponents in 'universality-class space'. Family-Vicsek (beta = alpha/z) leaves
+    only two of the three independent, so each class is a POINT in the (alpha, z)
+    plane, and rays through the origin are lines of constant beta."""
+    fig, ax = plt.subplots(figsize=(9, 7))
+    # constant-beta rays: z = alpha / beta
+    for beta, lab in [(0.5, r"$\beta=1/2$"), (1 / 3, r"$\beta=1/3$"), (0.25, r"$\beta=1/4$")]:
+        aa = np.linspace(0, 0.62, 10)
+        ax.plot(aa, aa / beta, ls=":", color="grey", lw=1.2, zorder=1)
+        al = min(0.60, 2.15 * beta)
+        ax.text(al, al / beta, lab, color="grey", fontsize=12, ha="left", va="bottom")
+    # reference classes (1+1 dimensions)
+    ax.plot(0.5, 1.5, "*", ms=24, color="black", zorder=5)
+    ax.annotate("KPZ", (0.5, 1.5), xytext=(10, -4), textcoords="offset points", fontsize=15)
+    ax.plot(0.5, 2.0, "*", ms=24, color="dimgrey", zorder=5)
+    ax.annotate("EW", (0.5, 2.0), xytext=(10, -4), textcoords="offset points", fontsize=15)
+    ax.plot(0, 0, "s", ms=12, color="crimson", zorder=5)
+    ax.annotate("random deposition\n" r"($\alpha\to0,\ \beta\to1/2$)", (0, 0),
+                xytext=(12, 8), textcoords="offset points", fontsize=12, color="crimson")
+    # our model's trajectory as N varies
+    Ns = list(res)
+    a = np.array([np.nanmean(res[N]["alpha"]) for N in Ns])
+    z = np.array([np.nanmean(res[N]["z"]) for N in Ns])
+    da = np.array([np.nanstd(res[N]["alpha"]) for N in Ns])
+    dz = np.array([np.nanstd(res[N]["z"]) for N in Ns])
+    ax.errorbar(a, z, xerr=da, yerr=dz, fmt="none", ecolor="0.6", lw=1, zorder=2)
+    ax.plot(a, z, "-", color="0.45", lw=1.3, zorder=3)
+    sc = ax.scatter(a, z, c=Ns, cmap="plasma", s=130, zorder=4, edgecolor="k", linewidth=0.6)
+    for N, x, y in zip(Ns, a, z):
+        ax.annotate(f"{N}", (x, y), xytext=(7, 7), textcoords="offset points", fontsize=11)
+    cb = fig.colorbar(sc, ax=ax)
+    cb.set_label("number of colours $N$")
+    ax.set_xlabel(r"roughness exponent $\alpha$")
+    ax.set_ylabel(r"dynamic exponent $z$")
+    ax.set_xlim(0, 0.65); ax.set_ylim(0, 2.25)
+
+    # zoomed inset on our trajectory (it is a tight cluster on the full scale)
+    axi = ax.inset_axes([0.06, 0.55, 0.40, 0.40])
+    for beta in (0.5, 1 / 3, 0.25):
+        aa = np.linspace(0, 0.62, 10)
+        axi.plot(aa, aa / beta, ls=":", color="grey", lw=1.1)
+    axi.errorbar(a, z, xerr=da, yerr=dz, fmt="none", ecolor="0.6", lw=1)
+    axi.plot(a, z, "-", color="0.45", lw=1.2)
+    axi.scatter(a, z, c=Ns, cmap="plasma", s=70, edgecolor="k", linewidth=0.5, zorder=4)
+    for N, x, y in zip(Ns, a, z):
+        axi.annotate(f"{N}", (x, y), xytext=(5, 4), textcoords="offset points", fontsize=9)
+    axi.set_xlim(0.18, 0.35); axi.set_ylim(0.45, 1.10)
+    axi.tick_params(labelsize=9)
+    axi.set_title("zoom on our model", fontsize=11)
+    ax.indicate_inset_zoom(axi, edgecolor="black")
+    save(fig, "universality_plane")
+
+
 def fig_exponent_flow(res):
     """alpha, beta, z as functions of N: how the three exponents flow together
     from the near-critical point toward the random-deposition limit."""
@@ -272,6 +391,7 @@ def fig_exponent_flow(res):
 
 if __name__ == "__main__":
     res = measure_all()
+    fig_universality_plane(res)
     fig_exponent_flow(res)
     fig_beta_eff()
     fig_slope_collapse()
