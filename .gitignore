@@ -6,3 +6,7 @@ sequentialKillingEnv/
 *.exe
 *outputs/
 *frames/
+
+# regenerable analysis caches (hidden, rebuilt on demand)
+.*_cache.npz
+.*_fits.json
