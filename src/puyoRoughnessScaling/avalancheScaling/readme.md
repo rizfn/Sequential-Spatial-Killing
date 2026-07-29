@@ -267,7 +267,7 @@ and its cutoff is stretched ($b=1/d$), not exponential. The large *extent*
 exponent $a\approx2.8$ is not a second puzzle — it is just $\tau$ mapped through
 the fractal, $a=d(\tau-1)+1$.
 
-**Cutoff scaling, and no roughness link (`cutoffScaling.py`).** The one $N$-knob
+**Cutoff scaling, and no roughness link.** The one $N$-knob
 $s_0$ scales as the match probability, $s_0\sim1/N$ (from high-moment ratios;
 $\langle s^2\rangle/\langle s\rangle$ reads a shallower slope only because it is
 floor-contaminated by the tiny-event bulk). Decompose $s_0=C(N)\,w_*^{\,d}$, with
@@ -278,9 +278,7 @@ real trend. So the **roughness is decoupled from the size distribution** — all
 the $N$-dependence is the branching cutoff $w_*$, and the surface roughness is a
 *parallel* consequence of $N$, not a driver. (A lateral slope *correlation length*
 — not measured here — is the only roughness observable that could still enter; the
-width and tail-rate do not.) Fits shown by eye in `integerN/fit_by_eye`: the
-stretched cutoff of $P(s)$ and the power law of $P(w)$ are each linearised so
-straightness is the test — see `fitByEye.py`.
+width and tail-rate do not.)
 
 Below $s\approx18$ a strong **even/odd parity oscillation** (even masses
 favoured — the elementary cluster is a pair) means no smooth form applies; all
@@ -321,11 +319,6 @@ counted (`drops_counted`) but not histogrammed, so $P(s)$ is normalized over
   \sim w^{d}$ and $P(w)\sim w^{-a}e^{-w/w_*}$ from `outputs/slopeResolved/`, makes
   `integerN/extent_mechanism`; also the honesty checks `test_ps_prefactor` (is the
   $P(s)$ power law required?) and `test_pw_form` (is $P(w)$ a power law $\times$ exp?).
-- `cutoffScaling.py` — the cutoff scaling $s_0\sim1/N$ and the roughness
-  decoupling ($C$ flat vs $\sigma\sim N^{1.34}$); makes `integerN/cutoff_scaling`.
-- `fitByEye.py` — by-eye fit diagnostics: $P(s)$ and $P(w)$ with their fits, each
-  paired with a linearisation (straight $\Rightarrow$ form correct); makes
-  `integerN/fit_by_eye`.
 
 ### outputs/
 | folder | contents |
@@ -339,11 +332,11 @@ Themed subfolders (`figures.py`'s `save()` takes the theme):
 | folder | contents |
 |---|---|
 | `criticality/` | `transition_vN`, `critical_test`, `mass_balance` |
-| `mechanism/` | `weibull_plot`, `mechanism_slope_vs_extent` |
+| `mechanism/` | `mechanism_slope_vs_extent` |
 | `speciesSawtooth/` | `cutoff_vs_N`, `sawtooth_mechanism` |
 | `finiteSize/` | `cutoff_vs_L`, `steady_state` |
 | `sizeDistribution/` | `avalanche_pdf_vs_L`, `avalanche_pdf_vs_N`, `clusters_duration` |
-| `integerN/` | `avalanche_pdf_integerN`, `tail_collapse_fixedshape`, `extent_mechanism`, `cutoff_scaling`, `fit_by_eye` |
+| `integerN/` | `avalanche_pdf_integerN`, `tail_collapse_fixedshape`, `extent_mechanism` |
 
 ## Reproducing
 
@@ -356,8 +349,6 @@ python figures.py
 python run_integerN.py | xargs -P 24 -L 1 ./avalancheDist > /dev/null
 python integerN.py         # the fixed-shape fit + collapse
 python extentMechanism.py  # the b = 1/d mechanism + honesty checks
-python cutoffScaling.py    # s0 ~ 1/N, and the roughness decoupling
-python fitByEye.py         # fit diagnostics (linearised, judge by eye)
 ```
 
 The main sweep is 1480 sims; **3.5 min wall** on 12 cores (42 core-min). `-P` is
